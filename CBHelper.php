@@ -186,7 +186,7 @@ class CBHelper
         // The cloudbase.io data APIs expect an array of objects to be inserted. If what we have been given is 
         // an associative array then it's a single object - insert it into an array 
         if (CBHelper::is_assoc($data_item))
-            return $this->send_http_post(array( $data_item ), $url, $files);
+            return $this->send_http_post(array( $data_item ), $url, "data", $files);
         else
             return $this->send_http_post($data_item, $url, "data", $files);
     }
