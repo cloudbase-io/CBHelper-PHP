@@ -38,8 +38,8 @@ class CBLogLevel
 
 class CBHelper
 {
-    const OUTPUT_FORMAT     = "json";
-    const CLOUDBASE_API_URL = "https://api.cloudbase.io";
+    const OUTPUT_FORMAT     = "json"; 
+    const CLOUDBASE_API_URL = "http://api.cloudbase.io";
     const CBLOG_DEFAULT_CATEGORY = "DEFAULT";
 
     private $appcode        = "";
@@ -69,7 +69,7 @@ class CBHelper
         $this->appcode = $app_code;
         $this->appsecret = $app_secret;
         $this->password = $app_password;
-		$lan = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+		$lan = (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : "en");
 		$cur_lan = explode(",", $lan);
 		$this->language = $cur_lan[0];
 
@@ -225,6 +225,37 @@ class CBHelper
         
         return $this->send_http_post( $post_data, $url, "data");
     }
+	
+	/**
+	 * Calls the cloud database APIs and runs the Data Aggregation Commands pver the collection.
+	 * @param string $collection_name The name of the cloud database collection
+	 * @param array $aggregate_conditions An ordered array of aggregate conditions to run over the data
+	 * 
+	 * @return array An associative array with the result of the data aggregation commands
+	 */
+	public function search_aggregate_document($collection_name, $aggregate_conditions) {
+		$action = "aggregate";
+        
+        $url = self::CLOUDBASE_API_URL . "/" . $this->appcode . "/" . $collection_name . "/" . $action;
+
+		// for a full description and structure of the possible search conditions see the
+		// documentation online at http://cloudbase.io/documentation/rest-apis#CloudBase
+        $post_data = array( "cb_aggregate_key" => $aggregate_conditions );
+        
+        return $this->send_http_post( $post_data, $url, "data");
+	}
+	
+	/**
+	 * Downloads a file attached to a document in a collection. 
+	 * @param string $file_id The id of the file to be downloaded from the cb_files field in a document
+	 * 
+	 * @return the data of the file
+	 */
+	public function download_file($file_id) {
+		$url = self::CLOUDBASE_API_URL . "/" . $this->appcode . "/file/" . $file_id;
+		
+		return $this->send_http_post( array(), $url, "download");
+	}
 
 	/**
 	 * executes a CloudFunction and returns the output if any is produced.
@@ -378,6 +409,7 @@ class CBHelper
 		// merge the array we have prepared of parameters with the additional http post parameters
 		// given to the call - these may contain the file attachments 
 		$prepared_data = array_merge($prepared_data, $additional_params);
+		//var_dump($prepared_data);
 		
 		// start the http post
         $curl = curl_init();
@@ -388,26 +420,32 @@ class CBHelper
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $prepared_data);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-
+		
         // execute the post and get the response output
         $curloutput = curl_exec($curl);
+		
+		//error_log($curloutput);
+		
 		// get the http status and error message
         $http_status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $curl_error = curl_error($curl);
         // we are done. close the curl connection
         curl_close($curl);
-		
-        $output_array = json_decode($curloutput, true);
-		$output = $output_array[$function_name];
-		$output["httpStatus"] = $http_status;
-		
-		return $output;
+		if ( $function_name == "download" ) {
+			return $curloutput;
+		} else {
+	        $output_array = json_decode($curloutput, true);
+			$output = $output_array[$function_name];
+			$output["httpStatus"] = $http_status;
+			
+			return $output;
+		}
     }
 
 	// returnes a uniquq id to identify the server we are running on
     private function get_device_uniq()
     {
-        return $_SERVER['REMOTE_ADDR'] . " - " . $_SERVER['HTTP_USER_AGENT'];
+        return (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] . " - " . $_SERVER['HTTP_USER_AGENT'] : $this->device_name);
     }
 
 	// returns whether the object given is an associative array
