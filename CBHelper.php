@@ -53,6 +53,8 @@ class CBHelper
 	public $auth_username	= "";
 	public $auth_password	= "";
 	
+	public $current_location = array();
+	
 	private $sessionid		= "";
 	private $language		= "";
 	
@@ -210,10 +212,13 @@ class CBHelper
 	 * looks up a document within a collection and returns an array of all the documents found
 	 * @param string the name of the collection to search into
 	 * @param array a number of search conditions to run the query on the collection. If this parameter is empty then the full collection will be returned
+	 * @param array $sort_fields An associative array containing the list of fields to sort the results by -  array( "score" => -1 ) - 1 for ascending order -1 for descending
+	 * @param int $offset The number of results to skip from the beginning of the cursor
+	 * @param int $limit The maximum number of records returned by the query
 	 * 
 	 * @return array an array or arrays containing the documents returned by your query
 	 */
-    public function search_document($collection_name, $search_conditions = array())
+    public function search_document($collection_name, $search_conditions = array(), $sort_fields = array(), $offset = -1, $limit = -1)
     {
         $action = "search";
         
@@ -222,6 +227,18 @@ class CBHelper
 		// for a full description and structure of the possible search conditions see the
 		// documentation online at http://cloudbase.io/documentation/rest-apis#CloudBase
         $post_data = array( "cb_search_key" => $search_conditions );
+		
+		if ( !empty($sort_fields) ) {
+			$post_data["cb_sort_key"] = $sort_fields;
+		}
+		
+		if ( is_numeric($limit) && $limit > 0 ) {
+			$post_data["cb_limit"] = $limit;
+		}
+		
+		if ( is_numeric($offset) && $offset > 0 ) {
+			$post_data["cb_offset"] = $offset;
+		}
         
         return $this->send_http_post( $post_data, $url, "data");
     }
@@ -230,10 +247,14 @@ class CBHelper
 	 * Calls the cloud database APIs and runs the Data Aggregation Commands pver the collection.
 	 * @param string $collection_name The name of the cloud database collection
 	 * @param array $aggregate_conditions An ordered array of aggregate conditions to run over the data
+	 * @param array $sort_fields An associative array containing the list of fields to sort the results by -  array( "score" => -1 ) - 1 for ascending order -1 for descending
+	 * @param int $offset The number of results to skip from the beginning of the cursor
+	 * @param int $limit The maximum number of records returned by the query
+	 * 
 	 * 
 	 * @return array An associative array with the result of the data aggregation commands
 	 */
-	public function search_aggregate_document($collection_name, $aggregate_conditions) {
+	public function search_aggregate_document($collection_name, $aggregate_conditions, $sort_fields = array(), $offset = -1, $limit = -1) {
 		$action = "aggregate";
         
         $url = self::CLOUDBASE_API_URL . "/" . $this->appcode . "/" . $collection_name . "/" . $action;
@@ -241,6 +262,18 @@ class CBHelper
 		// for a full description and structure of the possible search conditions see the
 		// documentation online at http://cloudbase.io/documentation/rest-apis#CloudBase
         $post_data = array( "cb_aggregate_key" => $aggregate_conditions );
+		
+		if ( !empty($sort_fields) ) {
+			$post_data["cb_sort_key"] = $sort_fields;
+		}
+		
+		if ( is_numeric($limit) && $limit > 0 ) {
+			$post_data["cb_limit"] = $limit;
+		}
+		
+		if ( is_numeric($offset) && $offset > 0 ) {
+			$post_data["cb_offset"] = $offset;
+		}
         
         return $this->send_http_post( $post_data, $url, "data");
 	}
@@ -402,8 +435,12 @@ class CBHelper
 		// if the application is set to require authentication then we set the 
 		// username and password fields to be sent.
 		if ($this->auth_username != "") {
-			$prepared_data["auth_username"] = $this->auth_username;
-			$prepared_data["auth_password"] = $this->auth_password;
+			$prepared_data["cb_auth_user"] = $this->auth_username;
+			$prepared_data["cb_auth_password"] = $this->auth_password;
+		}
+		
+		if ( !empty($this->current_location) ) {
+			$prepared_data["location_data"] = json_encode($this->current_location);
 		}
 
 		// merge the array we have prepared of parameters with the additional http post parameters
