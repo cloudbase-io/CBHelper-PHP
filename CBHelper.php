@@ -22,7 +22,7 @@
  * This class depends on the php Curl extension. Packages are available for most linux distribution
  * to install through your package manager of choice:<br/><br/>
  *
- * This full reference is a companion to <a href="/documentation/php" target="_blank">
+ * This full reference is a companion to <a href="/documentation/php/get-started" target="_blank">
  * the tutorial on the cloudbase.io website<a/>
  */
  
@@ -39,7 +39,7 @@ class CBLogLevel
 class CBHelper
 {
     const OUTPUT_FORMAT     = "json"; 
-    const CLOUDBASE_API_URL = "http://api.cloudbase.io";
+    const CLOUDBASE_API_URL = "https://api.cloudbase.io";
     const CBLOG_DEFAULT_CATEGORY = "DEFAULT";
 
     private $appcode        = "";
@@ -317,6 +317,25 @@ class CBHelper
     	$url = self::CLOUDBASE_API_URL . "/" . $this->appcode . "/applet/" . $fcode;
 		
 		return $this->send_http_post(array(), $url, "applet", $params);
+    }
+    
+    /**
+	 * executes a Shared Api and returns the output if any is produced.
+	 * @param string the unique Shared Api code
+	 * @param string The password for the Shared Api if necessary
+	 * @param array additional parameters to pass to the applet
+	 * 
+	 * @return array an associative array containing the output from the applet if any is produced
+	 */
+	public function call_shared_api($fcode, $password, $params = array())
+    {
+    	$url = self::CLOUDBASE_API_URL . "/" . $this->appcode . "/shared/" . $fcode;
+		
+		if ( isset($password) && !is_null($password) && trim($password) != "" ) {
+			$params["cb_shared_password"] = $password;
+		}
+		
+		return $this->send_http_post(array(), $url, "shared-api", $params);
     }
 	
 	/**
